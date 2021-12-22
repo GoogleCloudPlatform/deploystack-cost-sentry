@@ -4,20 +4,23 @@ source globals
 
 
 BASENAME=costsentry
+ZONE=us-central1-a
+REGION=$(echo "$ZONE" | rev | cut -c 3- | rev) 
 LABEL=$BASENAME
 
 print_title "COSTSENTRY INSTALL" "This process will create a Billing Budget, some VMs and a process that will stop the VM when the \nbudget is exceeeded." "5"
 
 PROJECT=$(gcloud config get-value project | xargs)
 collectParamters PROJECT "$1" "the id of the Google Cloud Project" "$PROJECT"
-collectParamters LABEL "$2" "the Compute Engine Instance label to which to apply cost sentry " "$LABEL"
+collectParamters ZONE "$2" "the Google Cloud Zone" "$ZONE" 
+collectParamters LABEL "$3" "the Compute Engine Instance label to which to apply cost sentry " "$LABEL"
 gcloud config set project ${PROJECT}
 
 BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 
 BUDGETAMOUNT=0USD
 
-ZONE=us-central1-a
+
 PROJECTNUMBER=$(gcloud projects list --filter="$PROJECT" --format="value(PROJECT_NUMBER)" | xargs)	
 SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
@@ -85,7 +88,7 @@ section_open "Deploy a Cloud Function"
     --trigger-topic $BASENAME-billing-channel \
     --entry-point LimitUsage --source code/function \
     --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT,LABEL=$LABEL \
-    --service-account=$SAFUNCTIONS   
+    --service-account=$SAFUNCTIONS  --region=$REGION 
 section_close 
 
 printf "$DIVIDER"

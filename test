@@ -1,0 +1,78 @@
+# I think it's a good idea to test your scripts. It's kinda awkward but you'll 
+# be happy you did 
+source globals
+get_project_id PROJECT
+ZONE=us-central1-a
+BASENAME=costsentry
+REGION=us-central1
+SAFUNCTIONSUSER=$BASENAME-functions-sa
+SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
+
+gcloud config set project ${PROJECT}
+
+BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
+
+./install $PROJECT $ZONE $BASENAME
+
+
+section_open "Testing Cloud Function is deployed"
+    evalTest 'gcloud functions describe costsentry --format="value(name)"' "projects/$PROJECT/locations/$REGION/functions/costsentry"
+section_close
+
+
+section_open "Testing Service Account exists"
+    evalTest "gcloud iam service-accounts list --format=\"value(email)\" | grep $SAFUNCTIONSUSER" $SAFUNCTIONS
+section_close
+
+section_open "Testing Budget exists"
+    BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
+    evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\"" $BUDGETNAME
+section_close
+
+section_open "Testing Compute Instance creation"
+    evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(name)\"" $BASENAME-example
+section_close
+
+section_open "Testing Pub/Sub"
+    evalTest "gcloud pubsub topics describe $BASENAME-billing-channel --format=\"value(name)\"" projects/$PROJECT/topics/$BASENAME-billing-channel
+section_close
+
+section_open "Testing Compute Instance RUNNING"
+    evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(STATUS)\"" RUNNING
+section_close
+
+
+./simulate $PROJECT $BASENAME
+
+section_open "Testing Compute Instance RUNNING"
+    evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(STATUS)\"" STOPPING
+section_close
+
+./uninstall $PROJECT $ZONE
+
+
+section_open "Testing Pub/Sub"
+    evalTest "gcloud pubsub topics describe $BASENAME-billing-channel --format=\"value(name)\"" "EXPECTERROR"
+section_close
+
+section_open "Testing Compute Instance creation"
+    evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(name)\"" "EXPECTERROR"
+section_close
+
+section_open "Testing Budget exists"
+    BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
+    evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\"" "EXPECTERROR"
+section_close
+
+section_open "Testing Service Account exists"
+    evalTest "gcloud iam service-accounts list --format=\"value(email)\" | grep $SAFUNCTIONSUSER" ""
+section_close
+
+section_open "Testing Cloud Function is deployed"
+    evalTest 'gcloud functions describe costsentry --format="value(name)"' "EXPECTERROR"
+section_close
+
+printf "$DIVIDER"
+printf "CONGRATS!!!!!!! \n"
+printf "You got the end the of your test with everything working. \n"
+printf "$DIVIDER"

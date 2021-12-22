@@ -1,10 +1,15 @@
+clear
 source globals
-PROJECT=cost-sentry-experiments
-BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
-
-
 BASENAME=costsentry
 ZONE=us-central1-a
+PROJECT=$(gcloud config get-value project | xargs)
+BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
+
+print_title "COSTSENTRY UNINSTALL" "This process will delete a Billing Budget, some VMs and a process that will stop the VM when the \nbudget is exceeeded." "5"
+
+collectParamters PROJECT "$1" "the id of the Google Cloud Project" "$PROJECT"
+collectParamters ZONE "$2" "the Google Cloud Zone" "$ZONE" 
+
 
 SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
