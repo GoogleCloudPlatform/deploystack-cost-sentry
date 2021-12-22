@@ -19,6 +19,8 @@ type PubSubMessage struct {
 	Data []byte `json:"data"`
 }
 
+// BillingNotice is a translation of the data that gets sent via PUB/SUB when
+// there is a billing overage
 type BillingNotice struct {
 	Name              string    `json:"budgetDisplayName"`
 	ThresholdExceeded float32   `json:"alertThresholdExceeded"`
@@ -29,7 +31,7 @@ type BillingNotice struct {
 	Code              string    `json:"currencyCode"`
 }
 
-// LimitUsage writes "Hello, World!" to the HTTP response.
+// LimitUsage will read in Billing overages and shut down machine's accordingly.
 func LimitUsage(ctx context.Context, m PubSubMessage) error {
 	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	label := os.Getenv("LABEL")
