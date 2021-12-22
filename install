@@ -1,0 +1,99 @@
+clear
+source globals
+
+
+
+BASENAME=costsentry
+LABEL=$BASENAME
+
+print_title "COSTSENTRY INSTALL" "This process will create a Billing Budget, some VMs and a process that will stop the VM when the \nbudget is exceeeded." "5"
+
+PROJECT=$(gcloud config get-value project | xargs)
+collectParamters PROJECT "$1" "the id of the Google Cloud Project" "$PROJECT"
+collectParamters LABEL "$2" "the Compute Engine Instance label to which to apply cost sentry " "$LABEL"
+gcloud config set project ${PROJECT}
+
+BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
+
+BUDGETAMOUNT=0USD
+
+ZONE=us-central1-a
+PROJECTNUMBER=$(gcloud projects list --filter="$PROJECT" --format="value(PROJECT_NUMBER)" | xargs)	
+SAFUNCTIONSUSER=$BASENAME-functions-sa
+SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
+SACOMPUTE=$PROJECTNUMBER-compute@developer.gserviceaccount.com
+
+
+
+
+
+# This is mostly for debugging, but I think it gives a nice user experience. 
+printf "${BCYAN}Project Details${NC} \n"
+printf "Project ID:                 $PROJECT \n"
+printf "Billing Account:            $BA \n"
+printf "Project Number:             $PROJECTNUMBER \n"
+printf "Compute Service Account:    $SACOMPUTE \n"
+printf "Functions Service Account:  $SAFUNCTIONS \n"
+
+section_open "Enabling services in your GCP project"
+    gcloud services enable billingbudgets.googleapis.com
+    gcloud services enable compute.googleapis.com
+    gcloud services enable cloudfunctions.googleapis.com
+    gcloud services enable cloudbuild.googleapis.com
+section_close
+
+section_open "Create Pub/Sub channel"
+    gcloud pubsub topics create $BASENAME-billing-channel
+section_close 
+
+section_open "Create Compute Instance to enforce"
+    gcloud compute instances create $BASENAME-example \
+    --zone $ZONE --machine-type "n1-standard-1" \
+    --image-project "debian-cloud" --image-family "debian-10" --boot-disk-size "200" \
+    --boot-disk-type "pd-standard" \
+    --boot-disk-device-name "$BASENAME-example" \
+    --labels=$LABEL=true
+ section_close
+
+section_open "Creating a Budget"
+    gcloud beta billing budgets create --display-name $BASENAME-budget --billing-account $BA \
+    --budget-amount $BUDGETAMOUNT --all-updates-rule-pubsub-topic=projects/$PROJECT/topics/$BASENAME-billing-channel
+
+    BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
+section_close
+
+section_open "Create Service Account and set permissions"
+    gcloud iam service-accounts create $SAFUNCTIONSUSER \
+    --description="Service Account for the costsentry to run as" \
+    --display-name="$SAFUNCTIONS"
+section_close
+
+section_open "Setting permissions"
+    printf "Enabling Cloud Function Service Account to stop Compute Engine Instances on $PROJECT \n"
+    gcloud projects add-iam-policy-binding $PROJECT \
+	--member serviceAccount:$SAFUNCTIONS \
+	--role roles/compute.instanceAdmin --no-user-output-enabled
+
+    printf "Enabling Cloud Build Service Account to act on behalf of Compute Service Account \n"	  
+    gcloud iam service-accounts add-iam-policy-binding $SACOMPUTE \
+	--member=serviceAccount:$SAFUNCTIONS \
+	--role roles/iam.serviceAccountUser --no-user-output-enabled     
+section_close
+
+section_open "Deploy a Cloud Function"
+    gcloud functions deploy costsentry --runtime go116 \
+    --trigger-topic $BASENAME-billing-channel \
+    --entry-point LimitUsage --source code/function \
+    --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT,LABEL=$LABEL \
+    --service-account=$SAFUNCTIONS   
+section_close 
+
+printf "$DIVIDER"
+printf "CONGRATS!!!!!!! \n"
+printf "You have configured a project, spun up architecture and deployed code.\n"
+printf "Since the budget is set to 0, whenever the next check and broadcast happens \n"
+printf "the VM we created will be stopped. If you want to see that happen sooner \n"
+printf "an overage can be simulated by sending a message to Pub/Sub. To do so  \n"
+printf "copy and paste the following into your terminal:  \n\n"
+printf "${BCYAN}./simulate $PROJECT $LABEL ${NC}\n\n"
+printf "$DIVIDER"	

@@ -1,0 +1,36 @@
+source globals
+PROJECT=cost-sentry-experiments
+BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
+
+
+BASENAME=costsentry
+ZONE=us-central1-a
+
+SAFUNCTIONSUSER=$BASENAME-functions-sa
+SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
+
+
+section_open "Deleting the Cloud Function"
+    gcloud functions delete costsentry -q
+section_close
+
+section_open "Deleting the service account"
+    gcloud iam service-accounts delete $SAFUNCTIONS -q 
+section_close
+
+
+section_open "Deleting the Budget"
+    BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
+    gcloud beta billing budgets delete $BUDGETNAME -q
+section_close
+
+
+
+
+section_open "Delete Compute Instance to enforce"
+    gcloud compute instances delete $BASENAME-example --zone $ZONE -q
+ section_close
+
+section_open "Delete Pub/Sub channel"
+    gcloud pubsub topics delete $BASENAME-billing-channel -q 
+section_close 

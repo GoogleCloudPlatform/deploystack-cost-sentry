@@ -1,0 +1,28 @@
+clear
+source globals
+BASENAME=costsentry
+LABEL=$BASENAME
+
+print_title "COSTSENTRY SIMULATE OVERAGE " "This process will send a simulate message saying your account is over budget to test the outcome" "1"
+
+PROJECT=$(gcloud config get-value project | xargs)
+collectParamters PROJECT "$1" "the id of the Google Cloud Project" "$PROJECT"
+collectParamters LABEL "$2" "the Compute Engine Instance label to which to apply cost sentry " "$LABEL"
+gcloud config set project ${PROJECT}
+
+printf "${BCYAN}Project Details${NC} \n"
+printf "Project ID:         $PROJECT \n"
+
+section_open "Listing VMs to see status"
+    gcloud compute instances list --filter="labels.$LABEL=true"
+section_close
+
+section_open "Sending test billing overage message"
+    MESSAGE=$(cat pubsub.test.json)
+    gcloud pubsub topics publish $BASENAME-billing-channel --message="$MESSAGE"
+    sleep 5
+section_close
+
+section_open "Listing VMs to see status"
+    gcloud compute instances list --filter="labels.$LABEL=true"
+section_close
