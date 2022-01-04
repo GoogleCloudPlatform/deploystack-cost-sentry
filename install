@@ -26,10 +26,6 @@ SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
 SACOMPUTE=$PROJECTNUMBER-compute@developer.gserviceaccount.com
 
-
-
-
-
 # This is mostly for debugging, but I think it gives a nice user experience. 
 printf "${BCYAN}Project Details${NC} \n"
 printf "Project ID:                 $PROJECT \n"
@@ -52,15 +48,16 @@ section_close
 section_open "Create Compute Instance to enforce"
     gcloud compute instances create $BASENAME-example \
     --zone $ZONE --machine-type "n1-standard-1" \
-    --image-project "debian-cloud" --image-family "debian-10" --boot-disk-size "200" \
-    --boot-disk-type "pd-standard" \
+    --image-project "debian-cloud" --image-family "debian-10" \
+    --boot-disk-size "200" --boot-disk-type "pd-standard" \
     --boot-disk-device-name "$BASENAME-example" \
     --labels=$LABEL=true
  section_close
 
 section_open "Creating a Budget"
-    gcloud beta billing budgets create --display-name $BASENAME-budget --billing-account $BA \
-    --budget-amount $BUDGETAMOUNT --all-updates-rule-pubsub-topic=projects/$PROJECT/topics/$BASENAME-billing-channel
+    gcloud beta billing budgets create --display-name $BASENAME-budget \
+    --billing-account $BA --budget-amount $BUDGETAMOUNT \
+    --all-updates-rule-pubsub-topic=projects/$PROJECT/topics/$BASENAME-billing-channel
 
     BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
 section_close
