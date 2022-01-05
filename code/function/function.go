@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/run/v1"
 )
 
 // PubSubMessage is the payload of a Pub/Sub event.
@@ -63,53 +64,134 @@ func LimitUsage(ctx context.Context, m PubSubMessage) error {
 	}
 	fmt.Println("Overbudget, stopping VMs.")
 
+	runsvc, err := run.NewService(ctx)
+	if err != nil {
+		fmt.Printf("error: %s \n", err)
+		return err
+	}
+
+	runServices, err := runServices(project, runsvc, label)
+	if err != nil {
+		fmt.Printf("error: %s \n", err)
+		return err
+	}
+
+	if err := runDisable(project, runsvc, runServices); err != nil {
+		fmt.Printf("error: %s \n", err)
+		return err
+	}
+	fmt.Printf("Cost Sentry disabled %d Cloud Run Services\n", len(runServices))
+
 	l := fmt.Sprintf("labels.%s = true", label)
 	filters := []string{
 		"status = RUNNING",
 		l,
 	}
 
-	computeService, err := compute.NewService(ctx)
+	gceservice, err := compute.NewService(ctx)
 	if err != nil {
 		fmt.Printf("error: %s \n", err)
 		return err
 	}
 
-	instances, err := getInstances(project, computeService, filters)
+	gceInstances, err := computeInstances(project, gceservice, filters)
 	if err != nil {
 		fmt.Printf("error: %s \n", err)
 		return err
 	}
 
-	if err := stopInstances(project, computeService, instances); err != nil {
+	if err := computeStop(project, gceservice, gceInstances); err != nil {
 		fmt.Printf("error: %s \n", err)
 		return err
 	}
 
-	fmt.Printf("Cost Sentry stopped %d instances\n", len(instances.Items))
+	fmt.Printf("Cost Sentry stopped %d Compute Engine instances\n", len(gceInstances.Items))
 	return nil
 }
 
-func stopInstances(project string, computeService *compute.Service, instanceList *compute.InstanceList) error {
-	for _, v := range instanceList.Items {
-		zoneStr := strings.Split(v.Zone, "/")
-		zone := zoneStr[len(zoneStr)-1]
-		stopCall := computeService.Instances.Stop(project, zone, v.Name)
-
-		if _, err := stopCall.Do(); err != nil {
-			return fmt.Errorf("error stopInstances: %s", err)
+func find(sl []string, sub string) bool {
+	for _, v := range sl {
+		if v == sub {
+			return true
 		}
 	}
 
+	return false
+}
+
+func runDisable(project string, svc *run.APIService, serviceList []*run.Service) error {
+	for _, s := range serviceList {
+
+		location, ok := s.Metadata.Labels["cloud.googleapis.com/location"]
+		if !ok {
+			return fmt.Errorf("location incorrectly placed in Cloud Run metadata")
+		}
+
+		name := fmt.Sprintf("projects/%s/locations/%s/services/%s", project, location, s.Metadata.Name)
+
+		iamPolicy, err := svc.Projects.Locations.Services.GetIamPolicy(name).Do()
+		if err != nil {
+			return fmt.Errorf("error getting IAM policy: %s", err)
+		}
+
+		for i, b := range iamPolicy.Bindings {
+			if find(b.Members, "allUsers") {
+				iamPolicy.Bindings[i] = nil
+			}
+		}
+
+		setReq := &run.SetIamPolicyRequest{}
+		setReq.Policy = iamPolicy
+
+		if _, err := svc.Projects.Locations.Services.SetIamPolicy(name, setReq).Do(); err != nil {
+			return fmt.Errorf("error disabling external access to services: %s", err)
+		}
+
+	}
 	return nil
 }
 
-func getInstances(project string, computeService *compute.Service, filters []string) (*compute.InstanceList, error) {
+func runServices(project string, srv *run.APIService, label string) ([]*run.Service, error) {
+	parent := fmt.Sprintf("projects/%s", project)
+	l := fmt.Sprintf("%s=true", label)
+	services := []*run.Service{}
+
+	locations, err := srv.Projects.Locations.List(parent).Do()
+	if err != nil {
+		return services, fmt.Errorf("error getting Cloud Run locations: %s", err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(locations.Locations))
+
+	for _, location := range locations.Locations {
+		go func(loc *run.Location) error {
+			defer wg.Done()
+
+			lp := fmt.Sprintf("projects/%s/locations/%s", project, loc.LocationId)
+
+			svcs, err := srv.Projects.Locations.Services.List(lp).LabelSelector(l).Do()
+			if err != nil {
+				return fmt.Errorf("error cannot get Cloud Run service for %s: %s", loc.LocationId, err)
+			}
+
+			services = append(services, svcs.Items...)
+
+			return nil
+		}(location)
+	}
+
+	wg.Wait()
+
+	return services, nil
+}
+
+func computeInstances(project string, srv *compute.Service, filters []string) (*compute.InstanceList, error) {
 	instances := &compute.InstanceList{}
-	zoneListCall := computeService.Zones.List(project)
+	zoneListCall := srv.Zones.List(project)
 	zoneList, err := zoneListCall.Do()
 	if err != nil {
-		return nil, fmt.Errorf("error - getInstances cannot get zone list")
+		return nil, fmt.Errorf("error - cannot get Compute Engine zone list: %s", err)
 	}
 
 	var wg sync.WaitGroup
@@ -118,11 +200,11 @@ func getInstances(project string, computeService *compute.Service, filters []str
 	for _, zone := range zoneList.Items {
 		go func(zone *compute.Zone) error {
 			defer wg.Done()
-			instanceListCall := computeService.Instances.List(project, zone.Name)
+			instanceListCall := srv.Instances.List(project, zone.Name)
 			instanceListCall.Filter(strings.Join(filters[:], " "))
 			instanceList, err := instanceListCall.Do()
 			if err != nil {
-				return fmt.Errorf("error - getInstances cannot get instance list")
+				return fmt.Errorf("cannot get Compute Engine instance list: %s", err)
 			}
 			instances.Items = append(instances.Items, instanceList.Items...)
 			return nil
@@ -132,7 +214,15 @@ func getInstances(project string, computeService *compute.Service, filters []str
 	return instances, nil
 }
 
-// Parse billing pubsub message
-// Determine if you should deactivate machines
-// if so get a list of machines to deactivate
-// deactivate them
+func computeStop(project string, srv *compute.Service, instanceList *compute.InstanceList) error {
+	for _, v := range instanceList.Items {
+		zoneStr := strings.Split(v.Zone, "/")
+		zone := zoneStr[len(zoneStr)-1]
+		stopCall := srv.Instances.Stop(project, zone, v.Name)
+
+		if _, err := stopCall.Do(); err != nil {
+			return fmt.Errorf("error stopping Compute Engine instances: %s", err)
+		}
+	}
+	return nil
+}

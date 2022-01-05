@@ -36,6 +36,12 @@ section_open "Delete Compute Instance to enforce"
     gcloud compute instances delete $BASENAME-example --zone $ZONE -q
  section_close
 
+ section_open "Delete Cloud Run Service to enforce"
+    gcloud run services delete $BASENAME-run-service --region=$REGION -q   
+ section_close
+
+ 
+
 section_open "Delete Pub/Sub channel"
     gcloud pubsub topics delete $BASENAME-billing-channel -q 
 section_close 

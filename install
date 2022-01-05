@@ -34,16 +34,24 @@ printf "Project Number:             $PROJECTNUMBER \n"
 printf "Compute Service Account:    $SACOMPUTE \n"
 printf "Functions Service Account:  $SAFUNCTIONS \n"
 
-section_open "Enabling services in your GCP project"
-    gcloud services enable billingbudgets.googleapis.com
-    gcloud services enable compute.googleapis.com
-    gcloud services enable cloudfunctions.googleapis.com
-    gcloud services enable cloudbuild.googleapis.com
-section_close
+# section_open "Enabling services in your GCP project"
+#     gcloud services enable billingbudgets.googleapis.com
+#     gcloud services enable compute.googleapis.com
+#     gcloud services enable cloudfunctions.googleapis.com
+#     gcloud services enable cloudbuild.googleapis.com
+# section_close
 
-section_open "Create Pub/Sub channel"
-    gcloud pubsub topics create $BASENAME-billing-channel
+# section_open "Create Pub/Sub channel"
+#     gcloud pubsub topics create $BASENAME-billing-channel
+# section_close 
+
+section_open "Create Cloud Run Service to enforce"
+    gcloud run deploy $BASENAME-run-service \
+    --image=us-docker.pkg.dev/cloudrun/container/hello --allow-unauthenticated \
+    --labels=$LABEL=true --region=$REGION --async
 section_close 
+
+exit
 
 section_open "Create Compute Instance to enforce"
     gcloud compute instances create $BASENAME-example \
