@@ -12,6 +12,7 @@ gcloud config set project ${PROJECT}
 
 BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 
+
 ./install $PROJECT $ZONE $BASENAME
 
 
@@ -41,11 +42,22 @@ section_open "Testing Compute Instance RUNNING"
     evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(STATUS)\"" RUNNING
 section_close
 
+section_open "Test Cloud Run Services"
+    evalTest 'gcloud run services describe $BASENAME-run-service --region=$REGION --format="value(name)"' "$BASENAME-run-service"
+    evalTest 'gcloud run services get-iam-policy $BASENAME-run-service --region=$REGION --format="value(bindings)"' "{'members': ['allUsers'], 'role': 'roles/run.invoker'}"
+section_close
+
+
 
 ./simulate $PROJECT $BASENAME
 
 section_open "Testing Compute Instance RUNNING"
     evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(STATUS)\"" STOPPING
+section_close
+
+section_open "Test Cloud Run Services EXIST BUT UNSHARED"
+evalTest 'gcloud run services describe $BASENAME-run-service --region=$REGION --format="value(name)"' "$BASENAME-run-service"
+evalTest 'gcloud run services get-iam-policy $BASENAME-run-service --region=$REGION --format="value(bindings)"' ""
 section_close
 
 ./uninstall $PROJECT $ZONE
@@ -70,6 +82,10 @@ section_close
 
 section_open "Testing Cloud Function is deployed"
     evalTest 'gcloud functions describe costsentry --format="value(name)"' "EXPECTERROR"
+section_close
+
+section_open "Test Cloud Run Services"
+evalTest 'gcloud run services describe $BASENAME-run-service --region=$REGION --format="value(name)"' "EXPECTERROR"
 section_close
 
 printf "$DIVIDER"
