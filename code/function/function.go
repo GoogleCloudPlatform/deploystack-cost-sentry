@@ -55,7 +55,7 @@ func LimitUsage(ctx context.Context, m PubSubMessage) error {
 
 	notice := BillingNotice{}
 	if err := json.Unmarshal([]byte(data), &notice); err != nil {
-		return fmt.Errorf("cannot unmarshall Pub/Sub message")
+		return fmt.Errorf("cannot unmarshall Pub/Sub message: %s", err)
 	}
 
 	if notice.Cost <= notice.Budget {
@@ -66,42 +66,41 @@ func LimitUsage(ctx context.Context, m PubSubMessage) error {
 
 	runsvc, err := run.NewService(ctx)
 	if err != nil {
-		fmt.Printf("error: %s \n", err)
+		fmt.Printf("cannont instaitate Cloud Run API service: %s \n", err)
 		return err
 	}
 
 	runServices, err := runServices(project, runsvc, label)
 	if err != nil {
-		fmt.Printf("error: %s \n", err)
+		fmt.Printf("cannot get a list of Cloud Run Services: %s \n", err)
 		return err
 	}
 
 	if err := runDisable(project, runsvc, runServices); err != nil {
-		fmt.Printf("error: %s \n", err)
+		fmt.Printf("cannot disable Cloud Run Services: %s \n", err)
 		return err
 	}
 	fmt.Printf("Cost Sentry disabled %d Cloud Run Services\n", len(runServices))
 
-	l := fmt.Sprintf("labels.%s = true", label)
 	filters := []string{
 		"status = RUNNING",
-		l,
+		fmt.Sprintf("labels.%s = true", label),
 	}
 
 	gceservice, err := compute.NewService(ctx)
 	if err != nil {
-		fmt.Printf("error: %s \n", err)
+		fmt.Printf("cannont instaitate Compute Engine API service:: %s \n", err)
 		return err
 	}
 
 	gceInstances, err := computeInstances(project, gceservice, filters)
 	if err != nil {
-		fmt.Printf("error: %s \n", err)
+		fmt.Printf("cannot get a list of Compute Engine Instances: %s \n", err)
 		return err
 	}
 
 	if err := computeStop(project, gceservice, gceInstances); err != nil {
-		fmt.Printf("error: %s \n", err)
+		fmt.Printf("cannot stop Compute Engine Instances: %s \n", err)
 		return err
 	}
 
