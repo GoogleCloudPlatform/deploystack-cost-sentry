@@ -56,7 +56,7 @@ func LimitUsage(ctx context.Context, m PubSubMessage) error {
 		return fmt.Errorf("cannot properly check the budget: %s", err)
 	}
 
-	if over {
+	if !over {
 		fmt.Println("Underbudget, no action needed.")
 		return nil
 	}
