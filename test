@@ -7,13 +7,14 @@ BASENAME=costsentry
 REGION=us-central1
 SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
+BUDGETAMOUNT=0USD
 
 gcloud config set project ${PROJECT}
 
 BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 
 
-./install $PROJECT $ZONE $BASENAME
+./install $PROJECT $REGION $ZONE $BASENAME $BUDGETAMOUNT
 
 
 section_open "Testing Cloud Function is deployed"
@@ -49,7 +50,7 @@ section_close
 
 
 
-./simulate $PROJECT $BASENAME
+./simulate $PROJECT $BASENAME $REGION
 
 section_open "Testing Compute Instance RUNNING"
     evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(STATUS)\"" STOPPING
@@ -72,7 +73,6 @@ section_open "Testing Compute Instance creation"
 section_close
 
 section_open "Testing Budget exists"
-    BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
     evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\"" "EXPECTERROR"
 section_close
 
