@@ -1,45 +1,54 @@
 clear
 source globals
 
-
-
 BASENAME=costsentry
-ZONE=us-central1-a
-REGION=$(echo "$ZONE" | rev | cut -c 3- | rev) 
 LABEL=$BASENAME
-
-print_title "COSTSENTRY INSTALL" "This process will create a Billing Budget, some VMs and a process that will stop the VM when the \nbudget is exceeeded." "5"
-
-PROJECT=$(gcloud config get-value project | xargs)
-collectParamters PROJECT "$1" "the id of the Google Cloud Project" "$PROJECT"
-collectParamters ZONE "$2" "the Google Cloud Zone" "$ZONE" 
-collectParamters LABEL "$3" "the Compute Engine Instance label to which to apply cost sentry " "$LABEL"
-gcloud config set project ${PROJECT}
-
-BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
-
 BUDGETAMOUNT=0USD
 
+DESC="This process will create the following:
+    * Billing Budget 
+    * Compute Engine Instance
+    * Cloud Run Service 
+    * Cloud Function that will stop Run and Compute Engine when the budget is exceeeded.
 
-PROJECTNUMBER=$(gcloud projects list --filter="$PROJECT" --format="value(PROJECT_NUMBER)" | xargs)	
-SAFUNCTIONSUSER=$BASENAME-functions-sa
-SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
-SACOMPUTE=$PROJECTNUMBER-compute@developer.gserviceaccount.com
+It will only stop resources that are configured with a 'label' which you will select.    
+"
 
-# This is mostly for debugging, but I think it gives a nice user experience. 
-printf "${BCYAN}Project Details${NC} \n"
-printf "Project ID:                 $PROJECT \n"
-printf "Billing Account:            $BA \n"
-printf "Project Number:             $PROJECTNUMBER \n"
-printf "Compute Service Account:    $SACOMPUTE \n"
-printf "Functions Service Account:  $SAFUNCTIONS \n"
+print_title "COSTSENTRY INSTALL" "$DESC" "5"
 
+handleProject PROJECT "$1"
+determineBillingAccount BA
+
+# Doing this earlier than normal, as compute is needed to poll things like 
+# regions and zones. 
 section_open "Enabling services in your GCP project"
     gcloud services enable billingbudgets.googleapis.com
-    gcloud services enable compute.googleapis.com
-    gcloud services enable cloudfunctions.googleapis.com
     gcloud services enable cloudbuild.googleapis.com
+    gcloud services enable compute.googleapis.com 
+    gcloud services enable cloudfunctions.googleapis.com
+    gcloud services enable run.googleapis.com
 section_close
+
+computeRegionPicker REGION "$2" "run"
+computeZonePicker ZONE "$3" "$REGION"
+collectParamters LABEL "$4" "the 'label' to apply to resources which will be affected by this process " "$LABEL"
+collectParamters BUDGETAMOUNT "$5" "the currency limit for this budget - ex (${CYAN}0USD)${NC}" "$BUDGETAMOUNT"
+get_project_number PROJECTNUMBER "$PROJECT"
+get_compute_serviceaccount SACOMPUTE "$PROJECTNUMBER"
+
+SAFUNCTIONSUSER=$BASENAME-functions-sa
+SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
+
+projectDetails "
+Project ID:,$PROJECT
+Region:,$REGION
+Zone:,$ZONE
+Billing Account:,$BA
+Budget Ammount:,$BUDGETAMOUNT
+Project Number:,$PROJECTNUMBER
+Compute Service Account:,$SACOMPUTE
+Functions Service Account:,$SAFUNCTIONS
+"
 
 section_open "Create Pub/Sub channel"
     gcloud pubsub topics create $BASENAME-billing-channel
@@ -50,7 +59,6 @@ section_open "Create Cloud Run Service to enforce"
     --image=us-docker.pkg.dev/cloudrun/container/hello --allow-unauthenticated \
     --labels=$LABEL=true --region=$REGION --async
 section_close 
-
 
 section_open "Create Compute Instance to enforce"
     gcloud compute instances create $BASENAME-example \
