@@ -6,15 +6,23 @@ LABEL=$BASENAME
 print_title "COSTSENTRY SIMULATE OVERAGE " "This process will send a simulate message saying your account is over budget to test the outcome" "1"
 
 PROJECT=$(gcloud config get-value project | xargs)
-collectParamters PROJECT "$1" "the id of the Google Cloud Project" "$PROJECT"
+handleProject PROJECT "$1"
 collectParamters LABEL "$2" "the Compute Engine Instance label to which to apply cost sentry " "$LABEL"
-gcloud config set project ${PROJECT}
+computeRegionPicker REGION "$3" "run"
 
-printf "${BCYAN}Project Details${NC} \n"
-printf "Project ID:         $PROJECT \n"
+
+projectDetails "
+Project ID:,$PROJECT
+Region:,$REGION
+"
 
 section_open "Listing VMs to see status"
     gcloud compute instances list --filter="labels.$LABEL=true"
+section_close
+
+section_open "Listing Services to see status"
+    gcloud run services list --filter="metadata.labels.$LABEL=true"
+    gcloud run services get-iam-policy costsentry-run-service --region $REGION --format="value(bindings)" 
 section_close
 
 section_open "Sending test billing overage message"
@@ -25,4 +33,10 @@ section_close
 
 section_open "Listing VMs to see status"
     gcloud compute instances list --filter="labels.$LABEL=true"
+section_close
+
+section_open "Listing Services to see status"
+    gcloud run services list --filter="metadata.labels.$LABEL=true"
+    printf "Below should no longer have allUsers have run.invoker\n"
+    gcloud run services get-iam-policy costsentry-run-service --region $REGION --format="value(bindings)" 
 section_close
