@@ -16,13 +16,14 @@
 BLACK='\033[0;30m'
 WHITE='\033[1;37m'
 CYAN='\033[0;36m'
-ONCYAN="\033[46m"
+ONCYAN="\033[36m"
 BCYAN='\033[1;36m'
 DCYAN='\033[2;36m'
 UCYAN='\033[4;36m'
 RED='\033[0;31m'
 BRED='\033[1;31m'
 ONRED="\033[41m"
+BGREEN='\033[1;32m'
 NC='\033[0m' # No Color
 DIVIDER=$(printf %"$(tput cols)"s | tr " " "*")
 DIVIDER+="\n"
@@ -99,7 +100,18 @@ function selectWithDefault() {
 
     local item i=0 numItems=$#
     local default=$1
+    local termwidth=$(tput cols)
+    local itemwidth=50
+    local itemCount=$(($numItems - 1))
+    local halfCount=$((($numItems - 1) / 2))
+    local -a printorder
+    local next=false
 
+    if [[ $(($itemCount % 2)) != 0 ]]; then
+        ((halfCount = halfCount + 1))
+    fi
+
+    local targetitem=0
     # Print numbered menu items, based on the arguments passed.
     for item; do # Short for: for item in "$@"; do
 
@@ -115,13 +127,63 @@ function selectWithDefault() {
         fi
 
         if [[ "$item" = $default ]]; then
-            printf ${BCYAN}'%s\n'${NC} "$printi) $item  - DEFAULT"
+            printf -v line '%s' "$printi) $item - (current)"
         else
-            printf '%s\n' "$printi) $item"
+            printf -v line '%s' "$printi) $item"
         fi
+
+        SPACER=$(printf %"$(($itemwidth - ${#line}))"s | tr " " " ")
+
+        local printitem
+        if [[ "$item" = $default ]]; then
+            printitem="${ONCYAN}${line}${NC}${SPACER}"
+        else
+            printitem="${line}${SPACER}"
+        fi
+
+        printorder[$targetitem]=$printitem
+        
         ((i = i + 1))
 
-    done >&2 # Print to stderr, as `select` does.
+        if [[ $termwidth -gt 90  ]]
+        then 
+             ((targetitem = targetitem + 2))
+
+            if [[ $i -gt $halfCount && $next != true ]]; then
+                targetitem=1
+                next=true
+            fi
+        else
+            ((targetitem = targetitem + 2))
+
+        fi
+    done
+
+    i=0
+    for item in "${printorder[@]}"; do
+
+        printf "$item"
+
+        if [[ $termwidth -gt 80 ]]; then
+            if [[ $i -lt 2 ]]; then
+                if [[ $i -eq 1 ]]; then
+                    printf "\n"
+                fi
+            else
+                if [[ $(($i % 2)) != 0 ]]; then
+                    printf "\n"
+                fi
+            fi
+        else
+            printf "\n"
+        fi
+
+        ((i = i + 1))
+
+    done >&2
+    if [[ $(($itemCount % 2)) != 0 ]]; then
+        printf "\n" >&2
+    fi
 
     # Prompt the user for the index of the desired item.
     while :; do
@@ -205,6 +267,7 @@ function determineBillingAccount() {
             break
         done
     fi
+
     eval $__resultvar="'$BA'"
 
 }
@@ -213,24 +276,25 @@ function selectProject() {
     local __resultvar=$1
     local PROJ
     local CURRPROJ
+    local CREATESTRING="[CREATE NEW PROJECT]"
 
     get_project_id CURRPROJ
 
     if [[ !($CURRPROJ) ]]; then
-        CURRPROJ="CREATE NEW PROJECT"
+        CURRPROJ="$CREATESTRING"
     fi
 
     PROJECT_LIST_GCLOUD=$(gcloud projects list --format="value(PROJECT_ID)")
     IFS=$'\n' read -rd '' -a PROJECTS <<<"$PROJECT_LIST_GCLOUD"
     PROJECTS=($(for l in ${PROJECTS[@]}; do echo $l; done | sort))
-    PROJECTS=("CREATE NEW PROJECT" ${PROJECTS[@]})
+    PROJECTS=("$CREATESTRING" ${PROJECTS[@]})
 
     printf "${BCYAN}Choose a project to use for this application. ${NC}\n"
     printf "${ONCYAN}NOTE:${CYAN}: This app will make changes to the project. ${NC}\n"
     printf "While those changes are reverseable, it would be better to put it in a fresh new project. \n"
 
     opt=$(selectWithDefault "$CURRPROJ" "${PROJECTS[@]}")
-    if [[ "$opt" == "CREATE NEW PROJECT" ]]; then
+    if [[ "$opt" == "$CREATESTRING" ]]; then
         createProject PROJ
     else
         PROJ=$opt
@@ -297,8 +361,6 @@ function computeZonePicker() {
         return
     fi
 
-    
-
     printf "Poling for zones...\n"
     ZONES_LIST_GCLOUD=$(gcloud compute zones list --filter=region=$REG --format="value(NAME)")
     IFS=$'\n' read -rd '' -a ZONES <<<"$ZONES_LIST_GCLOUD"
@@ -325,8 +387,7 @@ function get_project_id() {
 function get_project_number() {
     local __resultvar=$1
     local PRO=$2
-
-    VALUE=$(gcloud projects list --filter="$PRO" --format="value(PROJECT_NUMBER)" | xargs)
+    VALUE=$(gcloud projects list --filter="project_id=$PRO" --format="value(PROJECT_NUMBER)" | xargs)
     eval $__resultvar="'$VALUE'"
 }
 

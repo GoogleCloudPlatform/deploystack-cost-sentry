@@ -3,18 +3,38 @@ source globals
 BASENAME=costsentry
 ZONE=us-central1-a
 
-PROJECT=$(gcloud config get-value project | xargs)
-BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 
-print_title "COSTSENTRY UNINSTALL" "This process will delete a Billing Budget, some VMs and a process that will stop the VM when the \nbudget is exceeeded." "5"
+DESC="This process will delete the following:
+    * Billing Budget created by costsentry
+    * Compute Engine Instance  created by costsentry
+    * Cloud Run Service  created by costsentry
+    * Cloud Function created by costsentry
 
-collectParamters PROJECT "$1" "the id of the Google Cloud Project" "$PROJECT"
-collectParamters ZONE "$2" "the Google Cloud Zone" "$ZONE" 
-REGION=$(echo "$ZONE" | rev | cut -c 3- | rev) 
+Only resources created by Cost Sentry will be affected.    
+"
+
+print_title "COSTSENTRY UNINSTALL" "$DESC" "3"
+
+
+handleProject PROJECT "$1"
+determineBillingAccount BA
+
+computeRegionPicker REGION "$2" "run"
+computeZonePicker ZONE "$3" "$REGION"
 
 SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
 
+projectDetails "
+Project ID:,$PROJECT
+Region:,$REGION
+Zone:,$ZONE
+Billing Account:,$BA
+Budget Ammount:,$BUDGETAMOUNT
+Project Number:,$PROJECTNUMBER
+Compute Service Account:,$SACOMPUTE
+Functions Service Account:,$SAFUNCTIONS
+"
 
 section_open "Deleting the Cloud Function"
     gcloud functions delete costsentry -q
@@ -24,13 +44,10 @@ section_open "Deleting the service account"
     gcloud iam service-accounts delete $SAFUNCTIONS -q 
 section_close
 
-
 section_open "Deleting the Budget"
     BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
     gcloud beta billing budgets delete $BUDGETNAME -q
 section_close
-
-
 
 
 section_open "Delete Compute Instance to enforce"

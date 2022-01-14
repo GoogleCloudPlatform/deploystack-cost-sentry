@@ -49,7 +49,6 @@ Project Number:,$PROJECTNUMBER
 Compute Service Account:,$SACOMPUTE
 Functions Service Account:,$SAFUNCTIONS
 "
-
 section_open "Create Pub/Sub channel"
     gcloud pubsub topics create $BASENAME-billing-channel
 section_close 
@@ -117,5 +116,5 @@ printf "Since the budget is set to 0, whenever the next check and broadcast happ
 printf "the VM we created will be stopped. If you want to see that happen sooner \n"
 printf "an overage can be simulated by sending a message to Pub/Sub. To do so  \n"
 printf "copy and paste the following into your terminal:  \n\n"
-printf "${BCYAN}./simulate $PROJECT $LABEL ${NC}\n\n"
+printf "${BCYAN}./simulate $PROJECT $LABEL $REGION ${NC}\n\n"
 printf "$DIVIDER"	

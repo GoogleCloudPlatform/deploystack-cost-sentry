@@ -50,7 +50,7 @@ section_close
 
 
 
-./simulate $PROJECT $BASENAME $REGION
+./simulate $PROJECT $BASENAME $REGION $ZONE
 
 section_open "Testing Compute Instance RUNNING"
     evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(STATUS)\"" STOPPING
@@ -61,7 +61,7 @@ evalTest 'gcloud run services describe $BASENAME-run-service --region=$REGION --
 evalTest 'gcloud run services get-iam-policy $BASENAME-run-service --region=$REGION --format="value(bindings)"' ""
 section_close
 
-./uninstall $PROJECT $ZONE
+./uninstall $PROJECT $REGION $ZONE
 
 
 section_open "Testing Pub/Sub"

@@ -3,7 +3,17 @@ source globals
 BASENAME=costsentry
 LABEL=$BASENAME
 
-print_title "COSTSENTRY SIMULATE OVERAGE " "This process will send a simulate message saying your account is over budget to test the outcome" "1"
+DESC="This process will send a simulated message saying your account is over 
+budget to test the outcome. The following will happen:
+    * You will generate a pubsub message that indicates a budget overage has happened
+    * Cloud Functions will respond to thie event by shutting down tagged resources.
+    * Compute Engine Instances will be 'stopped'
+    * Cloud Run services will have 'allUsers' from access, rendering it private
+
+It will only stop resources that are configured with a 'label' which you will select.    
+"
+
+print_title "COSTSENTRY SIMULATE OVERAGE " "$DESC" "1"
 
 PROJECT=$(gcloud config get-value project | xargs)
 handleProject PROJECT "$1"
@@ -22,6 +32,7 @@ section_close
 
 section_open "Listing Services to see status"
     gcloud run services list --filter="metadata.labels.$LABEL=true"
+    printf "Below should have 'allUsers' in role 'run.invoker'\n"
     gcloud run services get-iam-policy costsentry-run-service --region $REGION --format="value(bindings)" 
 section_close
 
@@ -37,6 +48,6 @@ section_close
 
 section_open "Listing Services to see status"
     gcloud run services list --filter="metadata.labels.$LABEL=true"
-    printf "Below should no longer have allUsers have run.invoker\n"
+    printf "Below should no longer have 'allUsers' have 'run.invoker'\n"
     gcloud run services get-iam-policy costsentry-run-service --region $REGION --format="value(bindings)" 
 section_close
