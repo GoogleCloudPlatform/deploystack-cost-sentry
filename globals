@@ -15,16 +15,20 @@
 # Display Variables
 BLACK='\033[0;30m'
 WHITE='\033[1;37m'
+
 CYAN='\033[0;36m'
-ONCYAN="\033[36m"
 BCYAN='\033[1;36m'
 DCYAN='\033[2;36m'
+ONCYAN="\033[36m"
 UCYAN='\033[4;36m'
+
 RED='\033[0;31m'
 BRED='\033[1;31m'
 ONRED="\033[41m"
+
 BGREEN='\033[1;32m'
 NC='\033[0m' # No Color
+
 DIVIDER=$(printf %"$(tput cols)"s | tr " " "*")
 DIVIDER+="\n"
 
@@ -289,7 +293,7 @@ function selectProject() {
     PROJECTS=($(for l in ${PROJECTS[@]}; do echo $l; done | sort))
     PROJECTS=("$CREATESTRING" ${PROJECTS[@]})
 
-    printf "${BCYAN}Choose a project to use for this application. ${NC}\n"
+    printf "\n${BCYAN}Choose a project to use for this application. ${NC}\n\n"
     printf "${ONCYAN}NOTE:${CYAN}: This app will make changes to the project. ${NC}\n"
     printf "While those changes are reverseable, it would be better to put it in a fresh new project. \n"
 
