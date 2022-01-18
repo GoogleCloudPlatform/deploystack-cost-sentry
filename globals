@@ -323,7 +323,7 @@ function computeRegionPicker() {
         DEFAULT="us-central1"
     fi
 
-    printf "Poling for regions...\n"
+    printf "Polling for regions...\n"
     case $regiontype in
     "run")
         REGION_LIST_GCLOUD=$(gcloud run regions list --format="value(NAME)")
@@ -361,7 +361,7 @@ function computeZonePicker() {
         return
     fi
 
-    printf "Poling for zones...\n"
+    printf "Polling for zones...\n"
     ZONES_LIST_GCLOUD=$(gcloud compute zones list --filter=region=$REG --format="value(NAME)")
     IFS=$'\n' read -rd '' -a ZONES <<<"$ZONES_LIST_GCLOUD"
     ZONES=($(for l in ${ZONES[@]}; do echo $l; done | sort))
