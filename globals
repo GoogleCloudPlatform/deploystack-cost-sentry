@@ -206,8 +206,13 @@ function selectWithDefault() {
     done
 
     # Output the selected item, if any.
-    [[ -n $index ]] && printf %s "${@:index:1}"
-
+    if [[ -n $index ]]; then
+        if [[ $index == $default ]]; then
+            printf %s $index
+        else
+            printf %s "${@:index:1}"
+        fi
+    fi
 }
 
 # GCP PROJECT MANAGEMENT
