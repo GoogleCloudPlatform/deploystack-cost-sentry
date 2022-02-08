@@ -31,6 +31,7 @@ NC='\033[0m' # No Color
 
 DIVIDER=$(printf %"$(tput cols)"s | tr " " "*")
 DIVIDER+="\n"
+OUTPUTFILE="tmp.tmp"
 
 # INPUT COLLECTION
 function collectParamters() {
@@ -226,7 +227,7 @@ function handleProject {
     else
         selectProject VALUE
     fi
-
+    printf "gcloud config set project ${VALUE}\n" >> $OUTPUTFILE
     eval $__resultvar="'$VALUE'"
 }
 
@@ -424,6 +425,7 @@ function get_run_url() {
 
 # DISPLAY HELPERS
 function section_open() {
+    printf "# $1\n" >> $OUTPUTFILE
     section_description=$1
     printf "$DIVIDER"
     printf "${CYAN}$section_description${NC} \n"
@@ -431,12 +433,16 @@ function section_open() {
 }
 
 function section_close() {
+    printf "\n" >> $OUTPUTFILE
     printf "$DIVIDER"
     printf "${CYAN}$section_description ${BCYAN}- done${NC}\n"
     printf "\n\n"
 }
 
 function print_title() {
+     printf "#!/bin/bash\n" > $OUTPUTFILE
+    printf "set -v\n" >> $OUTPUTFILE
+    printf "# $1\n" >> $OUTPUTFILE
     printf "$DIVIDER"
     printf "${BCYAN}$1${NC} \n"
     printf "$2\n"
@@ -643,4 +649,35 @@ function randomString() {
         echo
     )
     eval $__resultvar="'$VALUE'"
+}
+
+function prGcloud(){
+    local prefix=$(which gcloud)
+    local tmp=${1/gcloud/$prefix}
+
+    local cmd="${tmp/\/\\}"
+    local orig="${1/\/\\}"
+    cmd=$(echo "${cmd//[$'\t\r\n']}")
+
+    IFS=$'\n' read -rd '' -a cmdlines <<<"$orig"
+
+    count=0
+    for line in "${cmdlines[@]}"
+    do
+    :
+    if [[ $count -lt   ${#cmdlines[@]}-1 ]]
+    then
+        printf "${BCYAN}$line${NC} \\ \n"
+        echo "$line \\" >> $OUTPUTFILE
+    else
+        printf "${BCYAN}$line${NC} \n"
+        echo "$line " >> $OUTPUTFILE
+        
+    fi
+    count=$[count + 1]
+    done
+
+
+   
+    eval "${cmd}"
 }

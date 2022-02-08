@@ -1,5 +1,6 @@
 clear
 source globals
+OUTPUTFILE="install.sh"
 
 BASENAME=costsentry
 LABEL=$BASENAME
@@ -22,11 +23,11 @@ determineBillingAccount BA
 # Doing this earlier than normal, as compute is needed to poll things like 
 # regions and zones. 
 section_open "Enabling services in your GCP project"
-    gcloud services enable billingbudgets.googleapis.com
-    gcloud services enable cloudbuild.googleapis.com
-    gcloud services enable compute.googleapis.com 
-    gcloud services enable cloudfunctions.googleapis.com
-    gcloud services enable run.googleapis.com
+    prGcloud "gcloud services enable billingbudgets.googleapis.com"
+    prGcloud "gcloud services enable cloudbuild.googleapis.com"
+    prGcloud "gcloud services enable compute.googleapis.com"
+    prGcloud "gcloud services enable cloudfunctions.googleapis.com"
+    prGcloud "gcloud services enable run.googleapis.com"
 section_close
 
 computeRegionPicker REGION "$2" "run"
@@ -50,63 +51,63 @@ Compute Service Account:,$SACOMPUTE
 Functions Service Account:,$SAFUNCTIONS
 "
 section_open "Create Pub/Sub channel"
-    gcloud pubsub topics create $BASENAME-billing-channel
+    prGcloud "gcloud pubsub topics create $BASENAME-billing-channel"
 section_close 
 
 section_open "Create Cloud Run Service to enforce"
-    gcloud run deploy $BASENAME-run-service \
-    --image=us-docker.pkg.dev/cloudrun/container/hello --allow-unauthenticated \
-    --labels=$LABEL=true --region=$REGION --async
+    prGcloud "gcloud run deploy $BASENAME-run-service 
+    --image=us-docker.pkg.dev/cloudrun/container/hello --allow-unauthenticated 
+    --labels=$LABEL=true --region=$REGION --async"
 section_close 
 
 section_open "Create Compute Instance to enforce"
-    gcloud compute instances create $BASENAME-example \
-    --zone $ZONE --machine-type "n1-standard-1" \
-    --image-project "debian-cloud" --image-family "debian-10" \
-    --boot-disk-size "200" --boot-disk-type "pd-standard" \
-    --boot-disk-device-name "$BASENAME-example" \
-    --labels=$LABEL=true
+    prGcloud "gcloud compute instances create $BASENAME-example 
+    --zone $ZONE --machine-type "n1-standard-1" 
+    --image-project "debian-cloud" --image-family "debian-10" 
+    --boot-disk-size "200" --boot-disk-type "pd-standard" 
+    --boot-disk-device-name "$BASENAME-example" 
+    --labels=$LABEL=true"
  section_close
 
 section_open "Creating a Budget"
-    gcloud beta billing budgets create --display-name $BASENAME-budget \
-    --billing-account $BA --budget-amount $BUDGETAMOUNT \
-    --all-updates-rule-pubsub-topic=projects/$PROJECT/topics/$BASENAME-billing-channel
+    prGcloud "gcloud beta billing budgets create --display-name $BASENAME-budget 
+    --billing-account $BA --budget-amount $BUDGETAMOUNT 
+    --all-updates-rule-pubsub-topic=projects/$PROJECT/topics/$BASENAME-billing-channel"
 
     BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
 section_close
 
 section_open "Create Service Account and set permissions"
-    gcloud iam service-accounts create $SAFUNCTIONSUSER \
-    --description="Service Account for the costsentry to run as" \
-    --display-name="$SAFUNCTIONS"
+    prGcloud "gcloud iam service-accounts create $SAFUNCTIONSUSER 
+    --description=\"Service Account for the costsentry to run as\" 
+    --display-name=\"$SAFUNCTIONS\""
 section_close
 
 section_open "Setting permissions"
     printf "Enabling Cloud Function Service Account to manage Cloud Run on $PROJECT \n"
-    gcloud projects add-iam-policy-binding $PROJECT \
-	--member serviceAccount:$SAFUNCTIONS \
-    --role roles/run.admin \
-    --no-user-output-enabled
+    prGcloud "gcloud projects add-iam-policy-binding $PROJECT 
+	--member serviceAccount:$SAFUNCTIONS 
+    --role roles/run.admin 
+    --no-user-output-enabled"
 
     printf "Enabling Cloud Function Service Account to stop Compute Engine Instances on $PROJECT \n"
-    gcloud projects add-iam-policy-binding $PROJECT \
-	--member serviceAccount:$SAFUNCTIONS \
-	--role roles/compute.instanceAdmin \
-    --no-user-output-enabled
+    prGcloud "gcloud projects add-iam-policy-binding $PROJECT 
+	--member serviceAccount:$SAFUNCTIONS 
+	--role roles/compute.instanceAdmin 
+    --no-user-output-enabled"
 
     printf "Enabling Cloud Build Service Account to act on behalf of Compute Service Account \n"	  
-    gcloud iam service-accounts add-iam-policy-binding $SACOMPUTE \
-	--member=serviceAccount:$SAFUNCTIONS \
-	--role roles/iam.serviceAccountUser --no-user-output-enabled     
+    prGcloud "gcloud iam service-accounts add-iam-policy-binding $SACOMPUTE 
+	--member=serviceAccount:$SAFUNCTIONS 
+	--role roles/iam.serviceAccountUser --no-user-output-enabled"     
 section_close
 
 section_open "Deploy a Cloud Function"
-    gcloud functions deploy costsentry --runtime go116 \
-    --trigger-topic $BASENAME-billing-channel \
-    --entry-point LimitUsage --source code/function \
-    --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT,LABEL=$LABEL \
-    --service-account=$SAFUNCTIONS  --region=$REGION 
+    prGcloud "gcloud functions deploy costsentry --runtime go116 
+    --trigger-topic $BASENAME-billing-channel 
+    --entry-point LimitUsage --source code/function 
+    --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT,LABEL=$LABEL 
+    --service-account=$SAFUNCTIONS  --region=$REGION"
 section_close 
 
 printf "$DIVIDER"

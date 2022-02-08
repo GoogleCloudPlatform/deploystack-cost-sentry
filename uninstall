@@ -1,7 +1,8 @@
 clear
 source globals
+OUTPUTFILE="uninstall.sh"
 BASENAME=costsentry
-ZONE=us-central1-a
+
 
 
 DESC="This process will delete the following:
@@ -37,29 +38,29 @@ Functions Service Account:,$SAFUNCTIONS
 "
 
 section_open "Deleting the Cloud Function"
-    gcloud functions delete costsentry -q
+    prGcloud "gcloud functions delete costsentry -q"
 section_close
 
 section_open "Deleting the service account"
-    gcloud iam service-accounts delete $SAFUNCTIONS -q 
+    prGcloud "gcloud iam service-accounts delete $SAFUNCTIONS -q" 
 section_close
 
 section_open "Deleting the Budget"
     BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
-    gcloud beta billing budgets delete $BUDGETNAME -q
+    prGcloud "gcloud beta billing budgets delete $BUDGETNAME -q"
 section_close
 
 
 section_open "Delete Compute Instance to enforce"
-    gcloud compute instances delete $BASENAME-example --zone $ZONE -q
+    prGcloud "gcloud compute instances delete $BASENAME-example --zone $ZONE -q"
  section_close
 
  section_open "Delete Cloud Run Service to enforce"
-    gcloud run services delete $BASENAME-run-service --region=$REGION -q   
+    prGcloud "gcloud run services delete $BASENAME-run-service --region=$REGION -q"   
  section_close
 
  
 
 section_open "Delete Pub/Sub channel"
-    gcloud pubsub topics delete $BASENAME-billing-channel -q 
+    prGcloud "gcloud pubsub topics delete $BASENAME-billing-channel -q" 
 section_close 
