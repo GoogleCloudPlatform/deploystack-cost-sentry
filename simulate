@@ -3,21 +3,25 @@ source globals
 BASENAME=costsentry
 LABEL=$BASENAME
 
-DESC="This process will send a simulated message saying your account is over 
-budget to test the outcome. The following will happen:
-    * You will generate a pubsub message that indicates a budget overage has happened
-    * Cloud Functions will respond to thie event by shutting down tagged resources.
-    * Compute Engine Instances will be 'stopped'
-    * Cloud Run services will have 'allUsers' from access, rendering it private
+DESC="This process will send a message to Pub/Sub simulating that a budget amount
+has been exceeded. The following will happen:
+    * A message will be sent through Pub/Sub that indicates a budget has been exceeded
+        * The message uses example data that does not correspond to the actual budget
+    * Cloud Functions will respond to thie event by shutting down labeled resources
+        * This label was chosen when running the install script
+    * Compute Engine instances will be 'stopped'
+    * Cloud Run services will have 'allUsers' removed from access, rendering them private
 
-It will only stop resources that are configured with a 'label' which you will select.    
+Only resources that are configured with the label chosen when installing will be affected.    
 "
 
 print_title "COSTSENTRY SIMULATE OVERAGE " "$DESC" "1"
 
 PROJECT=$(gcloud config get-value project | xargs)
 handleProject PROJECT "$1"
-collectParamters LABEL "$2" "the Compute Engine Instance label to which to apply cost sentry " "$LABEL"
+printf "Using Project ID: $PROJECT \n\n"
+
+collectParamters LABEL "$2" "the label chosen when installing Cost Sentry" "$LABEL"
 computeRegionPicker REGION "$3" "run"
 
 
@@ -39,6 +43,7 @@ section_close
 section_open "Sending test billing overage message"
     MESSAGE=$(cat pubsub.test.json)
     gcloud pubsub topics publish $BASENAME-billing-channel --message="$MESSAGE"
+    printf "Message sent to Pub/Sub: \n $MESSAGE \n"
     sleep 5
 section_close
 
