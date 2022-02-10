@@ -132,7 +132,7 @@ function selectWithDefault() {
         fi
 
         if [[ "$item" = $default ]]; then
-            printf -v line '%s' "$printi) $item - (current)"
+            printf -v line '%s' "$printi) $item - (default)"
         else
             printf -v line '%s' "$printi) $item"
         fi
@@ -261,24 +261,24 @@ function createProject() {
     eval $__resultvar="'$PROPOSED_PROJECT_ID'"
 }
 
+# It would be better to simply grab the relevant billing account for the project
+# But that's also currently a beta command
+# gcloud beta billing projects describe {PROJECT_ID}
 function determineBillingAccount() {
     local __resultvar=$1
-    BA_LIST_GCLOUD=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
-    IFS=$'\n' read -rd '' -a BA_LIST <<<"$BA_LIST_GCLOUD"
+    BA_LIST_GCLOUD=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" --filter="open=true" | xargs)
+    read -rd '' -a BA_LIST <<<"$BA_LIST_GCLOUD"
 
     if [ ${#BA_LIST[@]} == 1 ]; then
-        BA=$BA_LIST_GCLOUD
+        opt=$BA_LIST_GCLOUD
     else
-        printf "${BCYAN}Choose Billing Account from this list${NC}: "
-        gcloud beta billing accounts list
+        printf "${BCYAN}Choose Billing Account from this list: ${NC}\n"
+        gcloud beta billing accounts list --filter="open=true"
 
-        select opt in "${BA_LIST[@]}"; do
-            BA=$opt
-            break
-        done
+        opt=$(selectWithDefault "${BA_LIST[0]}" "${BA_LIST[@]}")
     fi
 
-    eval $__resultvar="'$BA'"
+    eval $__resultvar="'$opt'"
 
 }
 

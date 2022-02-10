@@ -18,7 +18,10 @@ It will only stop resources that are configured with a 'label' which you will se
 print_title "COSTSENTRY INSTALL" "$DESC" "5"
 
 handleProject PROJECT "$1"
+printf "Using Project ID: $PROJECT \n\n"
+
 determineBillingAccount BA
+printf "Using Billing Account ID: $BA \n\n"
 
 # Doing this earlier than normal, as compute is needed to poll things like 
 # regions and zones. 
@@ -113,7 +116,7 @@ section_close
 printf "$DIVIDER"
 printf "CONGRATS!!!!!!! \n"
 printf "You have configured a project, spun up architecture and deployed code.\n"
-printf "Since the budget is set to 0, whenever the next check and broadcast happens \n"
+printf "If the budget is set to 0, whenever the next check and broadcast happens \n"
 printf "the VM we created will be stopped. If you want to see that happen sooner \n"
 printf "an overage can be simulated by sending a message to Pub/Sub. To do so  \n"
 printf "copy and paste the following into your terminal:  \n\n"
