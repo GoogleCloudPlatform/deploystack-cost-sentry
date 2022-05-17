@@ -3,3 +3,4 @@ errFile
 test2
 *.sh
 tmp.tmp
+clean
