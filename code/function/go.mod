@@ -1,6 +1,6 @@
 module github.com/googlecloudplatform/appinabox_costsentry
 
-go 1.17
+go 1.16
 
 require (
 	cloud.google.com/go v0.99.0 // indirect

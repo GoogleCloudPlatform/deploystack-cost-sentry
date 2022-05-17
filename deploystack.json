@@ -1,0 +1,31 @@
+{	"title":"COSTSENTRY",
+	"duration":5,
+	"collect_project":true,
+	"collect_project_number":true,
+	"collect_region":true,
+    "collect_billing_account":true,
+	"region_type":"run",
+	"region_default":"us-central1",
+	"collect_zone":true,
+	"hard_settings":{
+		"basename":"costsentry"
+	},
+	"custom_settings":[
+		{	
+			"name":"label",
+			"description":"Please enter the 'label' to apply to resources which will be affected by this process", 
+			"default": "costsentry"
+		},
+		{
+			"name": "location",
+			"description": "the location for the Cloud Storage Bucket",
+			"default": "US",
+			"options": ["US", "EU", "ASIA"]
+		  },
+		{	
+			"name":"budgetamount",
+			"description":"Please enter the number limit for this budget", 
+			"default": "0"
+		}
+	]
+}
