@@ -1,0 +1,16 @@
+
+
+
+CONGRATS!!!!!!! 
+You have configured a project, spun up architecture and deployed code.
+A budget has been created with a target amount.
+If the spend for your billing account is above that target amount,
+the next broadcast message from the budget will trigger the Cloud Function 
+to stop the VM that was created and set the Cloud Run service to private.
+
+If you want to simulate the target amount being exceeded immediately,
+copy and paste the following into your terminal:  
+
+./simulate 
+
+
