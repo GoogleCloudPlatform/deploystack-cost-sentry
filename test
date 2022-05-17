@@ -1,20 +1,85 @@
-# I think it's a good idea to test your scripts. It's kinda awkward but you'll 
-# be happy you did 
-source globals
+# DON'T REMOVE FROM test script.
+CYAN='\033[0;36m'
+BCYAN='\033[1;36m'
+NC='\033[0m' # No Color
+DIVIDER=$(printf %"$(tput cols)"s | tr " " "*")
+DIVIDER+="\n"
+
+function get_project_id() {
+    local __resultvar=$1
+    VALUE=$(gcloud config get-value project | xargs)
+    eval $__resultvar="'$VALUE'"
+}
+
+function get_project_number() {
+    local __resultvar=$1
+    local PRO=$2
+    VALUE=$(gcloud projects list --filter="project_id=$PRO" --format="value(PROJECT_NUMBER)" | xargs)
+    eval $__resultvar="'$VALUE'"
+}
+
+# DISPLAY HELPERS
+function section_open() {
+    section_description=$1
+    printf "$DIVIDER"
+    printf "${CYAN}$section_description${NC} \n"
+    printf "$DIVIDER"
+}
+
+function section_close() {
+    printf "$DIVIDER"
+    printf "${CYAN}$section_description ${BCYAN}- done${NC}\n"
+    printf "\n\n"
+}
+
+function evalTest() {
+    local command=$1
+    local expected=$2
+
+    local ERR=""
+    got=$(eval $command 2>errFile)
+    ERR=$(<errFile)
+
+    if [ ${#ERR} -gt 0 ]; then
+        if [ "$expected" = "EXPECTERROR" ]; then
+            printf "ok \n"
+            return
+        fi
+
+        printf "expecting no error, got error='$ERR'   \n"
+        exit 1
+    fi
+
+    if [ "$got" != "$expected" ]; then
+        printf "expecting: '$expected' got: '$got'  \n"
+        exit 1
+    fi
+
+    printf "$expected is ok\n"
+}
+# END DON'T REMOVE FROM test script.
 get_project_id PROJECT
+gcloud services enable cloudresourcemanager.googleapis.com --project=$PROJECT
+get_project_number PROJECT_NUMBER $PROJECT
 ZONE=us-central1-a
 BASENAME=costsentry
 REGION=us-central1
+BUDGETAMOUNT=0
+BUDGETCURRENCY=USD
+LABEL=$BASENAME
+LOCATION=US
 SAFUNCTIONSUSER=$BASENAME-functions-sa
-SAFUNCTIONS=$SAFUNCTIONSUSER@$PROJECT.iam.gserviceaccount.com
-BUDGETAMOUNT=0USD
+SAFUNCTIONS="$SAFUNCTIONSUSER@$PROJECT_NUMBER.iam.gserviceaccount.com"
 
 gcloud config set project ${PROJECT}
 
 BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 
 
-./install $PROJECT $REGION $ZONE $BASENAME $BUDGETAMOUNT
+terraform init
+terraform apply -auto-approve -var project_id="${PROJECT}" -var project_number="${PROJECT_NUMBER}" -var location="${LOCATION}"  \
+                -var zone="${ZONE}" -var region="${REGION}" -var basename="${BASENAME}" -var label="${LABEL}" \
+                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" -var budgetcurrency="${BUDGETCURRENCY}"
 
 
 section_open "Testing Cloud Function is deployed"
@@ -23,7 +88,8 @@ section_close
 
 
 section_open "Testing Service Account exists"
-    evalTest "gcloud iam service-accounts list --format=\"value(email)\" | grep $SAFUNCTIONSUSER" $SAFUNCTIONS
+    echo "gcloud iam service-accounts list --filter=\"email=$SAFUNCTIONS\" --format=\"value(email)\""
+    evalTest "gcloud iam service-accounts list --filter=\"email=$SAFUNCTIONS\" --format=\"value(email)\""  $SAFUNCTIONS
 section_close
 
 section_open "Testing Budget exists"
@@ -37,6 +103,10 @@ section_close
 
 section_open "Testing Pub/Sub"
     evalTest "gcloud pubsub topics describe $BASENAME-billing-channel --format=\"value(name)\"" projects/$PROJECT/topics/$BASENAME-billing-channel
+section_close
+
+section_open "Testing Cloud Storage"
+    evalTest "gsutil ls gs://$PROJECT-function-deployer" "gs://$PROJECT-function-deployer/index.zip"
 section_close
 
 section_open "Testing Compute Instance RUNNING"
@@ -61,30 +131,37 @@ evalTest 'gcloud run services describe $BASENAME-run-service --region=$REGION --
 evalTest 'gcloud run services get-iam-policy $BASENAME-run-service --region=$REGION --format="value(bindings)"' ""
 section_close
 
-./uninstall $PROJECT $REGION $ZONE
+
+terraform destroy -auto-approve -var project_id="${PROJECT}" -var project_number="${PROJECT_NUMBER}" -var location="${LOCATION}"  \
+                -var zone="${ZONE}" -var region="${REGION}" -var basename="${BASENAME}" -var label="${LABEL}" \
+                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" -var budgetcurrency="${BUDGETCURRENCY}"
 
 
-section_open "Testing Pub/Sub"
+section_open "Testing Pub/Sub deleted"
     evalTest "gcloud pubsub topics describe $BASENAME-billing-channel --format=\"value(name)\"" "EXPECTERROR"
 section_close
 
-section_open "Testing Compute Instance creation"
+section_open "Testing Compute Instance deleted"
     evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(name)\"" "EXPECTERROR"
 section_close
 
-section_open "Testing Budget exists"
+section_open "Testing Budget deleted"
     evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\"" "EXPECTERROR"
 section_close
 
-section_open "Testing Service Account exists"
+section_open "Testing Service Account deleted"
     evalTest "gcloud iam service-accounts list --format=\"value(email)\" | grep $SAFUNCTIONSUSER" ""
 section_close
 
-section_open "Testing Cloud Function is deployed"
+section_open "Testing Cloud Storage deleted"
+    evalTest "gsutil ls gs://$PROJECT-function-deployer" "EXPECTERROR"
+section_close
+
+section_open "Testing Cloud Function deleted"
     evalTest 'gcloud functions describe costsentry --format="value(name)"' "EXPECTERROR"
 section_close
 
-section_open "Test Cloud Run Services"
+section_open "Test Cloud Run Service deleted"
 evalTest 'gcloud run services describe $BASENAME-run-service --region=$REGION --format="value(name)"' "EXPECTERROR"
 section_close
 

@@ -3,3 +3,8 @@ errFile
 test2
 *.sh
 tmp.tmp
+index.zip
+clean
+.terraform*
+terraform.tfstate
+terraform.tfstate.backup
