@@ -1,7 +1,72 @@
 clear
-source globals
-BASENAME=costsentry
-LABEL=$BASENAME
+
+CYAN='\033[0;36m'
+BCYAN='\033[1;36m'
+NC='\033[0m' # No Color
+DIVIDER=$(printf %"$(tput cols)"s | tr " " "*")
+DIVIDER+="\n"
+
+# DISPLAY HELPERS
+function section_open() {
+    section_description=$1
+    printf "$DIVIDER"
+    printf "${CYAN}$section_description${NC} \n"
+    printf "$DIVIDER"
+}
+
+function section_close() {
+    printf "$DIVIDER"
+    printf "${CYAN}$section_description ${BCYAN}- done${NC}\n"
+    printf "\n\n"
+}
+
+function print_title() {
+    printf "$DIVIDER"
+    printf "${BCYAN}$1${NC} \n"
+    printf "$2\n"
+    if [ $3 = 1 ]; then
+        printf "It's going to take around ${CYAN}1 min${NC} \n"
+    else
+        printf "It's going to take around ${CYAN}$3 mins${NC} \n"
+    fi
+
+    printf "$DIVIDER"
+}
+
+function projectDetails() {
+    local content
+    local raw=$(echo "${1//:/:${BCYAN}}")
+
+    IFS=$'\n' read -rd '' -a LINES <<<"$raw"
+    for line in "${LINES[@]}"; do
+        content=${content}"${NC}\n"${line}
+    done
+
+    linewidth=$(tput cols)
+    number=$(($linewidth - 15))
+
+    local SPACER=$(printf %"${number}"s | tr " " " ")
+
+    content=${content}${NC}
+    printf "\n"
+    printf "${ONCYAN}Project Details${SPACER}${NC}"
+    echo $content | column -s ',' -t
+    printf "\n"
+
+}
+
+
+
+
+input="terraform.tfvars"
+
+while IFS= read -r line
+do
+    lineArr=(${line//=/ })
+    key=$(echo "$lineArr[0]" | awk '{print toupper($0)}')
+    value=${lineArr[1]//\"/}
+    eval $key=$value
+done < "$input"
 
 DESC="This process will send a message to Pub/Sub simulating that a budget amount
 has been exceeded. The following will happen:
@@ -15,21 +80,19 @@ has been exceeded. The following will happen:
 Only resources that are configured with the label chosen when installing will be affected.    
 "
 
+
+
+
+
+
 print_title "COSTSENTRY SIMULATE OVERAGE " "$DESC" "1"
 
-PROJECT=$(gcloud config get-value project | xargs)
-handleProject PROJECT "$1"
-printf "Using Project ID: $PROJECT \n\n"
-
-collectParamters LABEL "$2" "the label chosen when installing Cost Sentry" "$LABEL"
-computeRegionPicker REGION "$3" "run"
-
-
 projectDetails "
-Project ID:,$PROJECT
+Project ID:,$PROJECT_ID
 Region:,$REGION
+Label:,$LABEL
+Basename:,$BASENAME
 "
-
 section_open "Listing VMs to see status"
     gcloud compute instances list --filter="labels.$LABEL=true"
 section_close
