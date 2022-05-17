@@ -71,6 +71,17 @@ LOCATION=US
 SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS="$SAFUNCTIONSUSER@$PROJECT_NUMBER.iam.gserviceaccount.com"
 
+echo "basename=\"${BASENAME}\"" > terraform.tfvars
+echo "billingaccount=\"${BA}\"" >> terraform.tfvars
+echo "label=\"${LABEL}\"" >> terraform.tfvars
+echo "project_id=\"${PROJECT}\"" >> terraform.tfvars
+echo "project_number=\"${PROJECT_NUMBER}\"" >> terraform.tfvars
+echo "region=\"${REGION}\"" >> terraform.tfvars
+echo "zone=\"${ZONE}\"" >> terraform.tfvars
+echo "location=\"${LOCATION}\"" >> terraform.tfvars
+echo "budgetamount=\"${BUDGETAMOUNT}\"" >> terraform.tfvars
+
+
 gcloud config set project ${PROJECT}
 
 BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
@@ -79,7 +90,7 @@ BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 terraform init
 terraform apply -auto-approve -var project_id="${PROJECT}" -var project_number="${PROJECT_NUMBER}" -var location="${LOCATION}"  \
                 -var zone="${ZONE}" -var region="${REGION}" -var basename="${BASENAME}" -var label="${LABEL}" \
-                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" -var budgetcurrency="${BUDGETCURRENCY}"
+                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" 
 
 
 section_open "Testing Cloud Function is deployed"
@@ -120,7 +131,7 @@ section_close
 
 
 
-./simulate $PROJECT $BASENAME $REGION $ZONE
+./simulate 
 
 section_open "Testing Compute Instance RUNNING"
     evalTest "gcloud compute instances describe $BASENAME-example --zone $ZONE --format=\"value(STATUS)\"" STOPPING
@@ -134,7 +145,7 @@ section_close
 
 terraform destroy -auto-approve -var project_id="${PROJECT}" -var project_number="${PROJECT_NUMBER}" -var location="${LOCATION}"  \
                 -var zone="${ZONE}" -var region="${REGION}" -var basename="${BASENAME}" -var label="${LABEL}" \
-                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" -var budgetcurrency="${BUDGETCURRENCY}"
+                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" 
 
 
 section_open "Testing Pub/Sub deleted"
@@ -164,6 +175,8 @@ section_close
 section_open "Test Cloud Run Service deleted"
 evalTest 'gcloud run services describe $BASENAME-run-service --region=$REGION --format="value(name)"' "EXPECTERROR"
 section_close
+
+rm terraform.tfvars
 
 printf "$DIVIDER"
 printf "CONGRATS!!!!!!! \n"

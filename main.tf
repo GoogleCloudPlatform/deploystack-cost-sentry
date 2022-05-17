@@ -27,13 +27,10 @@ variable "budgetamount" {
   type = string
 }
 
-variable "billingaccount" {
+variable "billing_account" {
   type = string
 }
 
-variable "budgetcurrency" {
-  type = string
-}
 
 variable "location" {
   type = string
@@ -185,7 +182,7 @@ resource "null_resource" "budgetset" {
 
 
     triggers = {
-        billingaccount = var.billingaccount
+        billing_account = var.billing_account
         basename = var.basename
         project_id = var.project_id
 
@@ -194,7 +191,7 @@ resource "null_resource" "budgetset" {
     provisioner "local-exec" {
         command = <<-EOT
         gcloud beta billing budgets create --display-name ${var.basename}-budget \
-        --billing-account ${var.billingaccount} --budget-amount ${var.budgetamount} \
+        --billing-account ${var.billing_account} --budget-amount ${var.budgetamount} \
         --all-updates-rule-pubsub-topic=projects/${var.project_id}/topics/${var.basename}-billing-channel 
         EOT
     }
@@ -202,7 +199,7 @@ resource "null_resource" "budgetset" {
     provisioner "local-exec" {
         when    = destroy
         command = <<-EOT
-        gcloud beta billing budgets delete $(gcloud beta billing budgets list --format="value(NAME)" --billing-account ${self.triggers.billingaccount}  --filter="displayName:${self.triggers.basename}-budget") -q --project=${self.triggers.project_id}
+        gcloud beta billing budgets delete $(gcloud beta billing budgets list --format="value(NAME)" --billing-account ${self.triggers.billing_account}  --filter="displayName:${self.triggers.basename}-budget") -q --project=${self.triggers.project_id}
         EOT
     }
 
