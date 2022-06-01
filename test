@@ -71,15 +71,15 @@ LOCATION=US
 SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS="$SAFUNCTIONSUSER@$PROJECT_NUMBER.iam.gserviceaccount.com"
 
-echo "basename=\"${BASENAME}\"" > terraform.tfvars
-echo "billingaccount=\"${BA}\"" >> terraform.tfvars
-echo "label=\"${LABEL}\"" >> terraform.tfvars
-echo "project_id=\"${PROJECT}\"" >> terraform.tfvars
-echo "project_number=\"${PROJECT_NUMBER}\"" >> terraform.tfvars
-echo "region=\"${REGION}\"" >> terraform.tfvars
-echo "zone=\"${ZONE}\"" >> terraform.tfvars
-echo "location=\"${LOCATION}\"" >> terraform.tfvars
-echo "budgetamount=\"${BUDGETAMOUNT}\"" >> terraform.tfvars
+# echo "basename=\"${BASENAME}\"" > terraform.tfvars
+# echo "billing_account=\"${BA}\"" >> terraform.tfvars
+# echo "label=\"${LABEL}\"" >> terraform.tfvars
+# echo "project_id=\"${PROJECT}\"" >> terraform.tfvars
+# echo "project_number=\"${PROJECT_NUMBER}\"" >> terraform.tfvars
+# echo "region=\"${REGION}\"" >> terraform.tfvars
+# echo "zone=\"${ZONE}\"" >> terraform.tfvars
+# echo "location=\"${LOCATION}\"" >> terraform.tfvars
+# echo "budgetamount=\"${BUDGETAMOUNT}\"" >> terraform.tfvars
 
 
 gcloud config set project ${PROJECT}
@@ -145,7 +145,7 @@ section_close
 
 terraform destroy -auto-approve -var project_id="${PROJECT}" -var project_number="${PROJECT_NUMBER}" -var location="${LOCATION}"  \
                 -var zone="${ZONE}" -var region="${REGION}" -var basename="${BASENAME}" -var label="${LABEL}" \
-                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" 
+                -var budgetamount="${BUDGETAMOUNT}" -var billing_account="${BA}" 
 
 
 section_open "Testing Pub/Sub deleted"
