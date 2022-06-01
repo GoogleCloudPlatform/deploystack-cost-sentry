@@ -84,8 +84,13 @@ SAFUNCTIONS="$SAFUNCTIONSUSER@$PROJECT_NUMBER.iam.gserviceaccount.com"
 
 gcloud config set project ${PROJECT}
 
-BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID) --limit 1" | xargs)
+accounts_list=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 
+arrIN=(${accounts_list// / })
+BA=arrIN[0]
+
+echo "project: $PROJECT"
+echo "account: $BA"
 
 terraform init
 terraform apply -auto-approve -var project_id="${PROJECT}" -var project_number="${PROJECT_NUMBER}" -var location="${LOCATION}"  \
