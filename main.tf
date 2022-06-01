@@ -60,7 +60,8 @@ variable "gcp_service_list" {
     "compute.googleapis.com",
     "cloudfunctions.googleapis.com",
     "storage.googleapis.com",
-    "run.googleapis.com"
+    "run.googleapis.com",
+    "iam.googleapis.com"
   ]
 }
 

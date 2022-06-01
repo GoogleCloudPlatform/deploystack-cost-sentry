@@ -90,7 +90,7 @@ BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 terraform init
 terraform apply -auto-approve -var project_id="${PROJECT}" -var project_number="${PROJECT_NUMBER}" -var location="${LOCATION}"  \
                 -var zone="${ZONE}" -var region="${REGION}" -var basename="${BASENAME}" -var label="${LABEL}" \
-                -var budgetamount="${BUDGETAMOUNT}" -var billingaccount="${BA}" 
+                -var budgetamount="${BUDGETAMOUNT}" -var billing_account="${BA}" 
 
 
 section_open "Testing Cloud Function is deployed"
