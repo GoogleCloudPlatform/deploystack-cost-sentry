@@ -87,7 +87,7 @@ gcloud config set project ${PROJECT}
 accounts_list=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
 
 arrIN=(${accounts_list// / })
-BA=arrIN[0]
+BA=$arrIN[0]
 
 echo "project: $PROJECT"
 echo "account: $BA"
