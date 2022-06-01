@@ -84,7 +84,7 @@ SAFUNCTIONS="$SAFUNCTIONSUSER@$PROJECT_NUMBER.iam.gserviceaccount.com"
 
 gcloud config set project ${PROJECT}
 
-BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
+BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID) --limit 1" | xargs)
 
 
 terraform init
