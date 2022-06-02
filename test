@@ -71,15 +71,7 @@ LOCATION=US
 SAFUNCTIONSUSER=$BASENAME-functions-sa
 SAFUNCTIONS="$SAFUNCTIONSUSER@$PROJECT_NUMBER.iam.gserviceaccount.com"
 
-echo "basename=\"${BASENAME}\"" > terraform.tfvars
-echo "billing_account=\"${BA}\"" >> terraform.tfvars
-echo "label=\"${LABEL}\"" >> terraform.tfvars
-echo "project_id=\"${PROJECT}\"" >> terraform.tfvars
-echo "project_number=\"${PROJECT_NUMBER}\"" >> terraform.tfvars
-echo "region=\"${REGION}\"" >> terraform.tfvars
-echo "zone=\"${ZONE}\"" >> terraform.tfvars
-echo "location=\"${LOCATION}\"" >> terraform.tfvars
-echo "budgetamount=\"${BUDGETAMOUNT}\"" >> terraform.tfvars
+
 
 
 gcloud config set project ${PROJECT}
@@ -89,6 +81,16 @@ BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" --filter="di
 
 echo "project: $PROJECT"
 echo "account: $BA"
+
+echo "basename=\"${BASENAME}\"" > terraform.tfvars
+echo "billing_account=\"${BA}\"" >> terraform.tfvars
+echo "label=\"${LABEL}\"" >> terraform.tfvars
+echo "project_id=\"${PROJECT}\"" >> terraform.tfvars
+echo "project_number=\"${PROJECT_NUMBER}\"" >> terraform.tfvars
+echo "region=\"${REGION}\"" >> terraform.tfvars
+echo "zone=\"${ZONE}\"" >> terraform.tfvars
+echo "location=\"${LOCATION}\"" >> terraform.tfvars
+echo "budgetamount=\"${BUDGETAMOUNT}\"" >> terraform.tfvars
 
 terraform init
 terraform apply -auto-approve -var-file=terraform.tfvars
