@@ -17,3 +17,5 @@ steps:
      entrypoint: bash
      args: [ './test' ]
 timeout: 2200s
+options:
+  machineType: 'E2_HIGHCPU_8'
