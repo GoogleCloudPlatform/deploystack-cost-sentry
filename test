@@ -88,7 +88,7 @@ accounts_list=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" |
 
 arrIN=(${accounts_list// / })
 BA=$arrIN
-
+echo "alist  : $accounts_list"
 echo "project: $PROJECT"
 echo "account: $BA"
 
