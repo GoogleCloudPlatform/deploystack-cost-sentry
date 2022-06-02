@@ -84,11 +84,9 @@ SAFUNCTIONS="$SAFUNCTIONSUSER@$PROJECT_NUMBER.iam.gserviceaccount.com"
 
 gcloud config set project ${PROJECT}
 
-accounts_list=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" | xargs)
+# If you are setting up your own test billing account, you have to put the word deploystack somewhere in the display name. 
+BA=$(gcloud beta billing accounts list --format="value(ACCOUNT_ID)" --filter="displayName~Deploystack" | xargs)
 
-arrIN=(${accounts_list// / })
-BA=$arrIN
-echo "alist  : $accounts_list"
 echo "project: $PROJECT"
 echo "account: $BA"
 
