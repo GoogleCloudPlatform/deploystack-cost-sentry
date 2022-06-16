@@ -107,11 +107,7 @@ section_open "Sending test billing overage message"
     MESSAGE=$(cat pubsub.test.json)
     gcloud pubsub topics publish $BASENAME-billing-channel --message="$MESSAGE"
     printf "Message sent to Pub/Sub: \n $MESSAGE \n"
-    sleep 5
-section_close
-
-section_open "Listing VMs to see status"
-    gcloud compute instances list --filter="labels.$LABEL=true"
+    sleep 10
 section_close
 
 section_open "Listing Services to see status"
@@ -119,3 +115,8 @@ section_open "Listing Services to see status"
     printf "Below should no longer have 'allUsers' have 'run.invoker'\n"
     gcloud run services get-iam-policy costsentry-run-service --region $REGION --format="value(bindings)" 
 section_close
+
+section_open "Listing VMs to see status"
+    gcloud compute instances list --filter="labels.$LABEL=true"
+section_close
+
