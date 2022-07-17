@@ -200,7 +200,7 @@ resource "null_resource" "budgetset" {
     provisioner "local-exec" {
         when    = destroy
         command = <<-EOT
-        gcloud beta billing budgets delete $(gcloud beta billing budgets list --format="value(NAME)" --billing-account ${self.triggers.billing_account}  --filter="displayName:${self.triggers.basename}-budget") -q --project=${self.triggers.project_id}
+        gcloud beta billing budgets delete $(gcloud beta billing budgets list --format="value(NAME)" --billing-account ${self.triggers.billing_account}  --filter="displayName:${self.triggers.basename}-budget") -q --billing-account ${self.triggers.billing_account} --project=${self.triggers.project_id}
         EOT
     }
 

@@ -108,7 +108,7 @@ section_close
 
 section_open "Testing Budget exists"
     BUDGETNAME=$(gcloud beta billing budgets list --format="value(NAME)" --billing-account $BA --filter="displayName:$BASENAME-budget" | xargs)
-    evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\"" $BUDGETNAME
+    evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\" --billing-account $BA" $BUDGETNAME
 section_close
 
 section_open "Testing Compute Instance creation"
@@ -158,7 +158,7 @@ section_open "Testing Compute Instance deleted"
 section_close
 
 section_open "Testing Budget deleted"
-    evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\"" "EXPECTERROR"
+    evalTest "gcloud beta billing budgets describe $BUDGETNAME --format=\"value(name)\" --billing-account $BA" "EXPECTERROR"
 section_close
 
 section_open "Testing Service Account deleted"
