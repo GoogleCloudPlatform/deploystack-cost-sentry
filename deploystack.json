@@ -1,4 +1,5 @@
 {	"title":"COSTSENTRY",
+	"name": "cost-sentry",
 	"duration":5,
 	"documentation_link": "https://cloud.google.com/shell/docs/cloud-shell-tutorials/deploystack/cost-sentry",
 	"collect_project":true,
