@@ -80,8 +80,8 @@ section_open "Deleting the Cloud Function"
 section_close
 
 section_open "Deleting the Cloud Storage Bucket"
-    gsutil rm -rf gs://$PROJECT-function-deployer
-    gsutil rb gs://$PROJECT-function-deployer
+    gcloud storage rm --recursive --continue-on-error gs://$PROJECT-function-deployer
+    gcloud storage buckets delete gs://$PROJECT-function-deployer
 section_close
 
 section_open "Deleting the service account"
