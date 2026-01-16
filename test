@@ -120,7 +120,7 @@ section_open "Testing Pub/Sub"
 section_close
 
 section_open "Testing Cloud Storage"
-    evalTest "gsutil ls gs://$PROJECT-function-deployer" "gs://$PROJECT-function-deployer/index.zip"
+    evalTest "gcloud storage ls gs://$PROJECT-function-deployer" "gs://$PROJECT-function-deployer/index.zip"
 section_close
 
 section_open "Testing Compute Instance RUNNING"
@@ -166,7 +166,7 @@ section_open "Testing Service Account deleted"
 section_close
 
 section_open "Testing Cloud Storage deleted"
-    evalTest "gsutil ls gs://$PROJECT-function-deployer" "EXPECTERROR"
+    evalTest "gcloud storage ls gs://$PROJECT-function-deployer" "EXPECTERROR"
 section_close
 
 section_open "Testing Cloud Function deleted"
